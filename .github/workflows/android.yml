@@ -1,0 +1,66 @@
+name: Build FNF Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 📥 Descargar source code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: ☕ Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: 🟢 Configurar Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: '4.3.7'
+
+      - name: 📦 Instalar Haxelib
+        run: |
+          haxelib setup ~/haxelib
+
+      - name: 🔧 Instalar dependencias Haxe
+        run: |
+          if [ -f hmm.json ]; then
+            haxelib install hmm
+            haxelib run hmm install
+          elif [ -f haxelib.json ]; then
+            haxelib install .
+          fi
+
+      - name: 🤖 Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📱 Instalar herramientas Android
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
+
+      - name: 🔨 Compilar FNF para Android
+        run: |
+          haxelib run lime build android -release -v
+
+      - name: 🔎 Buscar APK
+        run: |
+          echo "Buscando APK..."
+          find export -type f -name "*.apk" -print
+
+      - name: 📤 Subir APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FNF-Android-APK
+          path: |
+            export/**/*.apk
+            export/**/*.aab
+          if-no-files-found: error
